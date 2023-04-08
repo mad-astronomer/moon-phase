@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="styles.css">
     <title>Фаза Луны сейчас</title>
 </head>
-<body>
+<body onload="calculate()">
     <h1>Фаза Луны на сегодня</h1>
     <p class="date"></p>
     <canvas id="canvas" width="200" height="200">
@@ -15,6 +15,12 @@
     <p class="phase"></p>
     <p class="description"></p>
     <ul class="forecast"></ul>
+    <div class="dateForm">
+            <label>Фаза на дату:</label>
+            <input type="date" id="datenow">
+        <button class="button" onclick="calculate()">РАССЧИТАТЬ</button>
+    </div>
+    <script src="./constants.js">    </script>
     <script src="./script.js">    </script>
     <footer><p>&#169;<script>document.write(new Date().getFullYear())</script> Упоротый Звездочёт</p></footer>
 </body>

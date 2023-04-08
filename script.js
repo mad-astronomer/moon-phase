@@ -1,19 +1,115 @@
 ///algorithm for the moon longitude from https://www.aa.quae.nl/en/reken/hemelpositie.html#4
 
-//display current date and time
-const now = new Date();
-const paragraph = document.querySelector('.date');
-paragraph.innerHTML+=`${now.toLocaleDateString()} ${now.getHours()}:${now.getMinutes()<10?('0'+now.getMinutes()):now.getMinutes()}`;
-///////////////
-const equinox = getEquinoxDate().getTime();
+//let now = new Date();
+var now, equinox, day0, today, interval, angle, forecast, moonNightColor;
+document.getElementById("datenow").value = ''
+calculate()
 
-//variables for the current moonphase calculation
-const day0 = new Date(Date.UTC(2000,0,1,12,0,0)).getTime();
-const today = new Date().getTime();
-//const today = new Date().getTime();
-const interval = (today - day0)/86400000;
-let angle = getMoonAngle(interval,today);
-////////////
+function calculate() {
+    if(document.getElementById("datenow").value){
+        now = new Date(document.getElementById("datenow").value);
+    }
+    else {
+        now = new Date()
+    }
+    displayNow()
+
+        //calculating the phase %
+    switch(true){
+        case angle < 90:
+            //(R-b)/2R
+            //0.0174533 = 1 degree in radians
+            phase = Math.round(((1-Math.cos(angle*0.017453292))/2)*100);
+            break;
+        case angle < 180:
+            //180-A
+            //(R+b)/2R
+            phase = Math.round(((1+Math.cos((180-angle)*0.017453292))/2)*100);
+            break;
+        case angle < 270:
+            //A-180
+            //(R+b)/2R
+            phase = Math.round(((1+Math.cos((angle-180)*0.017453292))/2)*100);
+            break;
+        case angle < 360:
+            //360-A
+            //(R-b)/2R
+            phase = Math.round(((1-Math.cos((360-angle)*0.017453292))/2)*100);
+            break;
+    }
+
+    //displays the description
+    document.querySelector('.description').innerHTML=`
+    Диск Луны освещен на ${phase}%`;
+    document.querySelector('.phase').innerHTML = `<b>${getPhaseName(angle)}</b>`;
+
+
+    //rgb(42, 50, 58) inside 25 31 35
+    //rgb(17, 19, 23) outside
+    let red = Math.floor(17+(phase/100)*25);
+    let green = Math.floor(19+(phase/100)*31);
+    let blue = Math.floor(23+(phase/100)*35);
+    document.querySelector('body').style.background = `no-repeat center radial-gradient(circle at 50% 270px, rgb(${red},${green},${blue}) 10%,rgb(17, 19, 23) 60%`;
+
+
+    const forecastDiv = document.querySelector('.forecast');
+    forecastDiv.innerHTML=''
+    for(i=0; i<forecast.length; i++){
+        let date = new Date(forecast[i][0]).getDate();
+        let month = new Date(forecast[i][0]).getMonth()+1;
+        let year = new Date(forecast[i][0]).getFullYear();
+        let li = document.createElement('li');
+        li.innerHTML=`<li><img src='${forecast[i][1]}.png'>${addLeadZero(date)}.${addLeadZero(month)}.${year}</li>`;
+        forecastDiv.appendChild(li);
+    }
+
+
+    moonNightColor = `${Math.floor(42-(25*((phase+1)/100)))},${Math.floor(48-(29*((phase+1)/100)))},${Math.floor(58-(35*((phase+1)/100)))}`;
+
+    //draws moon phase
+    switch (true){
+        case angle < 90:
+            drawMoon('#EEE',`rgb(${moonNightColor})`,`rgb(${moonNightColor})`,100-phase*2,100,-1);
+            break;
+        case angle < 180:
+            drawMoon('#EEE',`rgb(${moonNightColor})`,'#EEE',100,(phase-50)*2,1);
+            break;
+        case angle < 270:
+            drawMoon(`rgb(${moonNightColor})`,'#EEE','#EEE',(phase-50)*2,100,-1);
+            break;
+        case angle <= 360:
+            drawMoon(`rgb(${moonNightColor})`,'#EEE',`rgb(${moonNightColor})`,100,100-phase*2,1);
+            break;
+    }
+
+}
+
+
+function displayNow(){
+    //display current date and time
+    //const now = new Date();
+
+    //var now = new Date(Date.UTC(2000,2,12,12,0,0))
+    const paragraph = document.querySelector('.date');
+    paragraph.innerHTML=''
+    paragraph.innerHTML+=`${now.toLocaleDateString()} ${now.getHours()}:${now.getMinutes()<10?('0'+now.getMinutes()):now.getMinutes()}`;
+    ///////////////
+    equinox = getEquinoxDate().getTime();
+
+    updateVars()
+}
+
+function updateVars(){
+    //variables for the current moonphase calculation
+    day0 = new Date(Date.UTC(2000,0,1,12,0,0)).getTime();
+    //const today = new Date().getTime();
+    today = now.getTime();
+    interval = (today - day0)/86400000;
+    angle = getMoonAngle(interval,today);
+    ////////////
+    forecast = makeForecast()
+}
+
 
 function getEquinoxDate(){
     let okEquinox = new Date(Date.UTC(2022,2,20,15,33,0)).getTime();
@@ -25,26 +121,6 @@ function getEquinoxDate(){
     return new Date(okEquinox);
 }
 
-function fullMoonName(){
-    const name=[
-        'Волчья Луна',
-        'Снежная Луна',
-        'Штормовая Луна',
-        'Розовая Луна',
-        'Цветочная Луна',
-        'Клубничная Луна',
-        'Оленья Луна',
-        'Осетровая Луна',
-        'Урожайная Луна',
-        'Охотничья Луна',
-        'Бобровая Луна',
-        'Холодная Луна'
-    ];
-    if (now.getDate() > 29){
-        return 'Синяя Луна';
-    }
-    else return name[now.getMonth()];
-}
 
 //calculates longitude for the provided day
 //returns angle difference between sun and moon (phase)
@@ -126,7 +202,6 @@ function makeForecast(){
     }
     return forecast;
 }
-let forecast = makeForecast();
 
 //nearest main phase
 //receives moon-sun angle
@@ -180,72 +255,6 @@ function getPhaseName(phaseAngle){
     return moonName;
 }
 
-//calculating the phase %
-switch(true){
-    case angle < 90:
-        //(R-b)/2R
-        //0.0174533 = 1 degree in radians
-        phase = Math.round(((1-Math.cos(angle*0.017453292))/2)*100);
-        break;
-    case angle < 180:
-        //180-A
-        //(R+b)/2R
-        phase = Math.round(((1+Math.cos((180-angle)*0.017453292))/2)*100);
-        break;
-    case angle < 270:
-        //A-180
-        //(R+b)/2R
-        phase = Math.round(((1+Math.cos((angle-180)*0.017453292))/2)*100);
-        break;
-    case angle < 360:
-        //360-A
-        //(R-b)/2R
-        phase = Math.round(((1-Math.cos((360-angle)*0.017453292))/2)*100);
-        break;
-}
-
-//displays the description
-document.querySelector('.description').innerHTML=`
-Диск Луны освещен на ${phase}%`;
-document.querySelector('.phase').innerHTML = `<b>${getPhaseName(angle)}</b>`;
-
-
-//rgb(42, 50, 58) inside 25 31 35
-//rgb(17, 19, 23) outside
-let red = Math.floor(17+(phase/100)*25);
-let green = Math.floor(19+(phase/100)*31);
-let blue = Math.floor(23+(phase/100)*35);
-document.querySelector('body').style.background = `no-repeat center radial-gradient(circle at 50% 270px, rgb(${red},${green},${blue}) 10%,rgb(17, 19, 23) 60%`;
-
-
-const forecastDiv = document.querySelector('.forecast');
-for(i=0; i<forecast.length; i++){
-    let date = new Date(forecast[i][0]).getDate();
-    let month = new Date(forecast[i][0]).getMonth()+1;
-    let year = new Date(forecast[i][0]).getFullYear();
-    let li = document.createElement('li');
-    li.innerHTML=`<li><img src='${forecast[i][1]}.png'>${addLeadZero(date)}.${addLeadZero(month)}.${year}</li>`;
-    forecastDiv.appendChild(li);
-}
-
-
-let moonNightColor = `${Math.floor(42-(25*((phase+1)/100)))},${Math.floor(48-(29*((phase+1)/100)))},${Math.floor(58-(35*((phase+1)/100)))}`;
-
-//draws moon phase
-switch (true){
-    case angle < 90:
-        drawMoon('#EEE',`rgb(${moonNightColor})`,`rgb(${moonNightColor})`,100-phase*2,100,-1);
-        break;
-    case angle < 180:
-        drawMoon('#EEE',`rgb(${moonNightColor})`,'#EEE',100,(phase-50)*2,1);
-        break;
-    case angle < 270:
-        drawMoon(`rgb(${moonNightColor})`,'#EEE','#EEE',(phase-50)*2,100,-1);
-        break;
-    case angle <= 360:
-        drawMoon(`rgb(${moonNightColor})`,'#EEE',`rgb(${moonNightColor})`,100,100-phase*2,1);
-        break;
-}
 
 function drawMoon(color1,color2,color3,radius1,radius2,sign){
     var canvas = document.getElementById('canvas');
